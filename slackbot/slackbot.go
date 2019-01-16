@@ -69,7 +69,7 @@ func (bot *Bot) Message(channel string, msg string) {
 	if bot.config.Offline {
 		fmt.Printf("< %s\n", msg)
 	} else {
-		bot.client.PostMessage(channel, msg, slack.NewPostMessageParameters())
+		bot.client.PostMessage(channel, slack.MsgOptionText(msg, false))
 	}
 }
 
