@@ -9,11 +9,38 @@ import math
 
 start_page = 5
 end_page = 29
+dpi = 300
 pdf_name = sys.argv[1]
 
 border_clr = (186,199,192)
 back_clr = (255,255,255)
 
+brown = (140,60,31)
+lightbrown = (214, 169, 9)
+cyan = (107, 199, 184)
+blue = (0, 88, 145)
+grey = (159, 161, 164)
+green = (81, 149, 53)
+purple = (114, 61, 131)
+lightblue =(73, 106, 163)
+red = (219, 66, 82)
+orange = (243, 113, 33)
+
+icons = [
+    {"color" : brown, "txt" : "Organico"},
+    {"color" : lightbrown, "txt" : "Carta e cartone"},
+    {"color" : cyan, "txt" : "Vetro"},
+    {"color" : blue, "txt" : "Imballaggi e contenitori"},
+    {"color" : grey, "txt" : "Indifferenziata"},
+    {"color" : green, "txt" : "Centro di raccolta"},
+    {"color" : purple, "txt" : "Ditte specializzate"},
+    {"color" : lightblue, "txt" : "Contenitore specifico"},
+    {"color" : red, "txt" : "Ritiro ingombranti"},
+    {"color" : orange, "txt" : "Rivenditori autorizzati"},
+]
+
+row_desc = ["txt", "icons", "icons", "txt"]
+FIELD_SEP = ":"
 
 def Dist(a, b):
     sum = 0
@@ -22,7 +49,7 @@ def Dist(a, b):
     return math.sqrt(sum)
 
 def ColorEq(a, b):
-    epsilon = 1
+    epsilon = 5
     return Dist(a, b) < epsilon
 
 def FindRowSize(img, x_start, y_start):
@@ -56,7 +83,28 @@ def FindColumnsBoundaries(img, x_start, y_start):
                 if ColorEq(pix_t, border_clr):
                     col_ends.append(x)
     return col_starts, col_ends
-    
+
+
+def Ocr(img):
+    tmpfile = tempfile.gettempdir() + "/ocr.png"
+    img.save(tmpfile, "PNG")
+    tess = ["tesseract", tmpfile, "stdout", "-l", "ita",  "--dpi",  "%d" % dpi]
+    return subprocess.check_output(tess)
+
+def findIcons(img):
+    msg = set()
+    w, h = img.size
+    for x in range(w):
+        pix = img.getpixel((x, h/2))
+        for i in range(len(icons)):
+            if ColorEq(pix, icons[i]["color"]):
+                msg.add(icons[i]["txt"]) 
+                break
+    return ", ".join(msg)
+
+def log(str):
+    sys.stderr.write(str + "\n")
+    sys.stderr.flush()
 
 def DecodePage(filename):
     
@@ -86,7 +134,7 @@ def DecodePage(filename):
                 y_start = y
                 break
     else:
-        print "%s: Cannot find table Y start coordinate" % filename
+        log("%s: Cannot find table Y start coordinate" % filename)
         exit(1)
     
     found = 0
@@ -100,20 +148,21 @@ def DecodePage(filename):
                 x_start = x
                 break
     else:
-        print "%s: Cannot find table X start coordinate" % filename
+        log("%s: Cannot find table X start coordinate" % filename)
         exit(1)
 
     col_starts, col_ends = FindColumnsBoundaries(img, 0, y_start)
-    print "image: %s" % filename           
-    print "x_start %d, y_start %d" % (x_start, y_start)
-    print "col_starts, col_ends", col_starts, col_ends
+    log("image: %s" % filename)
+    log("x_start %d, y_start %d" % (x_start, y_start))
+    log("col_starts, col_ends" +  str(col_starts) + str(col_ends))
     row = 0
     while 1:
         #find row size
         row_size = FindRowSize(img, x_start, y_start)
         if row_size == None:
             return
-        print "row %d" % row
+        log("row %d" % row)
+        record = []
         for i in range(len(col_starts)):
             #Crop cell
             left = col_starts[i]
@@ -121,8 +170,18 @@ def DecodePage(filename):
             right = col_ends[i]
             lower = y_start + row_size
             im = img.crop((left, upper, right, lower))
-            #########TODO: extract cell information
-            #im.show()
+            if row_desc[i] == "txt":
+                msg = Ocr(im)
+                msg = msg.strip().replace("-\n", "").replace("\n", " ")
+                record.append(msg)
+            elif row_desc[i] == "icons":
+                msg = findIcons(im)
+                record.append(msg)
+            else:
+                log("Error in row description format")
+                exit(1)
+        sys.stdout.write(":".join(record) + "\n")
+            
            
         #go to the next row
         for y in range(y_start + row_size, h):    
@@ -131,14 +190,14 @@ def DecodePage(filename):
                 y_start = y
                 break
         else:
-            print "%s: Cannot find end of row" % filename
+            log("%s: Cannot find end of row" % filename)
             exit(1)
         row += 1
     
 tmpdir = tempfile.gettempdir()
-gs_cmd ="gs -dFirstPage=%d -dLastPage=%d -dNOPAUSE -dBATCH -sDEVICE=png16m -o%s/file-%%03d.png -r300 %s" % (start_page, end_page, tmpdir, pdf_name)
+gs_cmd ="gs -dFirstPage=%d -dLastPage=%d -dNOPAUSE -dBATCH -sDEVICE=png16m -o%s/file-%%03d.png -r%d %s" % (start_page, end_page, tmpdir, dpi, pdf_name)
 '''
-print "Extracting pages using ghostscript:\n%s\n" % gs_cmd
+log("Extracting pages using ghostscript:\n%s\n" % gs_cmd)
 ret = subprocess.call(gs_cmd.split())
 if ret != 0:
     exit(ret)
