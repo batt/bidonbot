@@ -112,7 +112,7 @@ func main() {
 
 	httpPort := os.Getenv("PORT")
 	if httpPort == "" {
-		httpPort = "80"
+		httpPort = "8080"
 	}
 	fmt.Printf("Run HTTP server on port:%v\n\r", httpPort)
 	http.ListenAndServe(":"+httpPort, nil)
