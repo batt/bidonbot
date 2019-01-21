@@ -40,7 +40,7 @@ icons = [
 ]
 
 row_desc = ["txt", "icons", "icons", "txt"]
-FIELD_SEP = ":"
+FIELD_SEP = ";"
 
 def Dist(a, b):
     sum = 0
@@ -180,7 +180,7 @@ def DecodePage(filename):
             else:
                 log("Error in row description format")
                 exit(1)
-        sys.stdout.write(":".join(record) + "\n")
+        sys.stdout.write(FIELD_SEP.join(record) + "\n")
             
            
         #go to the next row
