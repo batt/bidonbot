@@ -196,12 +196,12 @@ def DecodePage(filename):
     
 tmpdir = tempfile.gettempdir()
 gs_cmd ="gs -dFirstPage=%d -dLastPage=%d -dNOPAUSE -dBATCH -sDEVICE=png16m -o%s/file-%%03d.png -r%d %s" % (start_page, end_page, tmpdir, dpi, pdf_name)
-'''
+
 log("Extracting pages using ghostscript:\n%s\n" % gs_cmd)
 ret = subprocess.call(gs_cmd.split())
 if ret != 0:
     exit(ret)
-'''
+
 for p in range(0, end_page - start_page +1):
     f = "%s/file-%03d.png" % (tmpdir, p+1)
     DecodePage(f)
