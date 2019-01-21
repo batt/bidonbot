@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 
 	log "github.com/Sirupsen/logrus"
@@ -12,8 +13,14 @@ import (
 	"github.com/nlopes/slack"
 )
 
-func loadFile(file_url string) map[string]string {
-	m := make(map[string]string)
+type Trash struct {
+	Type   string
+	Method string
+	Note   string
+}
+
+func loadFile(file_url string) map[string]Trash {
+	m := make(map[string]Trash)
 	resp, err := http.Get(file_url)
 	if err != nil {
 		log.Error(err)
@@ -24,10 +31,10 @@ func loadFile(file_url string) map[string]string {
 
 	scanner := bufio.NewScanner(resp.Body)
 	for scanner.Scan() {
-		a := strings.Split(scanner.Text(), ":")
-		if len(a) == 2 {
+		a := strings.Split(scanner.Text(), ";")
+		if len(a) == 4 {
 			k := strings.TrimSpace(a[0])
-			v := strings.TrimSpace(a[1])
+			v := Trash{strings.TrimSpace(a[1]), strings.TrimSpace(a[2]), strings.TrimSpace(a[3])}
 			m[k] = v
 		} else {
 			log.Warnf("Unable to split \"'%s\"", scanner.Text())
@@ -59,17 +66,35 @@ func main() {
 		reply := ""
 		found := 0
 		fmt.Printf("Message from channel (%s): %s\n", msg.Channel, msg.Text)
-		trash := msg.Text
+		re := regexp.MustCompile("<@.*>")
+		text := re.ReplaceAllString(msg.Text, "")
+		fmt.Println(text)
+		trash := strings.Split(strings.ToLower(text), " ")
 		for k, v := range recycle {
-			if strings.Contains(strings.ToLower(k), strings.ToLower(trash)) {
+			allFound := true
+			for _, t := range trash {
+				if !strings.Contains(strings.ToLower(k), t) {
+					allFound = false
+				}
+			}
+			if allFound {
+				reply = reply + fmt.Sprintf("- %s -> %s", k, v.Type)
+				if v.Method != "" {
+					reply = reply + fmt.Sprintf(" conferire in: %s", v.Method)
+				}
+				if v.Note != "" {
+					reply = reply + fmt.Sprintf(" - NOTE: %s", v.Note)
+				}
+				reply = reply + "\n"
 				found++
-				reply = reply + fmt.Sprintf("- %s -> %s\n", k, v)
 			}
 		}
-		if found > 0 {
+		if found > 16 {
+			bot.Message(msg.Channel, fmt.Sprintf("Ho trovato %d corrispondenze! Sii più preciso cribbio\n", found))
+		} else if found > 0 {
 			bot.Message(msg.Channel, "Ho trovato i seguenti rifiuti:\n"+reply)
 		} else {
-			bot.Message(msg.Channel, "Non sono in grado di trovare nulla, sorry :(")
+			bot.Message(msg.Channel, fmt.Sprintf("Non ho trovato niente che corrisponda a '%s', mi spiace :(", text))
 		}
 	})
 
