@@ -37,7 +37,7 @@ func loadFile(file_url string) map[string]Trash {
 			v := Trash{strings.TrimSpace(a[1]), strings.TrimSpace(a[2]), strings.TrimSpace(a[3])}
 			m[k] = v
 		} else {
-			log.Warnf("Unable to split \"'%s\"", scanner.Text())
+			log.Warnf("Unable to split \"%s\"", scanner.Text())
 		}
 	}
 	return m
