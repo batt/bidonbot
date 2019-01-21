@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"html"
 	"net/http"
 	"os"
 	"regexp"
@@ -109,6 +110,10 @@ func main() {
 			log.Fatalln(err)
 		}
 	}(bot)
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "Hello, %q", html.EscapeString(r.URL.Path))
+	})
 
 	httpPort := os.Getenv("PORT")
 	if httpPort == "" {
