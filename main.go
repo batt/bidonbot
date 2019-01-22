@@ -141,7 +141,7 @@ func main() {
 				select {
 				case <-ticker.C:
 					fmt.Println("keepalive ping!")
-					http.Get(httpURL)
+					http.Get(httpURL + "/keepalive")
 				case <-sleep.C:
 					fmt.Println("going to sleep")
 					return
