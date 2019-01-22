@@ -8,6 +8,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/batt/bidonbot/slackbot"
@@ -119,6 +120,36 @@ func main() {
 	if httpPort == "" {
 		httpPort = "8080"
 	}
+
+	httpURL := os.Getenv("HTTPURL")
+	if httpURL == "" {
+		httpURL = "https://bidonbot.herokuapp.com"
+	}
+
+	http.HandleFunc("/keepalive", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "OK")
+		fmt.Println("keepalice pong")
+	})
+
+	http.HandleFunc("/wakeup", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "OK")
+		fmt.Println("http get on /wakeup")
+		sleep := time.NewTimer(18 * time.Hour)
+		ticker := time.NewTicker(10 * time.Minute)
+		go func() {
+			for {
+				select {
+				case <-ticker.C:
+					fmt.Println("keepalive ping!")
+					http.Get(httpURL)
+				case <-sleep.C:
+					fmt.Println("going to sleep")
+					return
+				}
+			}
+		}()
+	})
+
 	fmt.Printf("Run HTTP server on port:%v\n\r", httpPort)
 	http.ListenAndServe(":"+httpPort, nil)
 }
