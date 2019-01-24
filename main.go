@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -131,24 +132,45 @@ func main() {
 		fmt.Println("keepalice pong")
 	})
 
-	http.HandleFunc("/wakeup", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "OK")
-		fmt.Println("http get on /wakeup")
-		sleep := time.NewTimer(18 * time.Hour)
-		ticker := time.NewTicker(10 * time.Minute)
-		go func() {
-			for {
-				select {
-				case <-ticker.C:
+	wakeUpTime := os.Getenv("WAKEUP_TIME")
+	if wakeUpTime == "" {
+		wakeUpTime = "6:00"
+	}
+
+	sleepTime := os.Getenv("SLEEP_TIME")
+	if sleepTime == "" {
+		sleepTime = "21:00"
+	}
+
+	w := strings.Split(wakeUpTime, ":")
+	s := strings.Split(sleepTime, ":")
+
+	wh, _ := strconv.Atoi(w[0])
+	wm, _ := strconv.Atoi(w[1])
+	wakeUpOffset := (60*wh + wm) % (60 * 24)
+
+	sh, _ := strconv.Atoi(s[0])
+	sm, _ := strconv.Atoi(s[1])
+	awakeMinutes := (60*(sh+24) + sm - wakeUpOffset) % (60 * 24)
+
+	ticker := time.NewTicker(10 * time.Minute)
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				now := time.Now()
+
+				elapsedMinutes := (60*(now.Hour()+24) + now.Minute() - wakeUpOffset) % (60 * 24)
+				fmt.Printf("Awake for %d minutes\n", elapsedMinutes)
+				if elapsedMinutes < awakeMinutes {
 					fmt.Println("keepalive ping!")
 					http.Get(httpURL + "/keepalive")
-				case <-sleep.C:
-					fmt.Println("going to sleep")
-					return
+				} else {
+					fmt.Println("skipping keepalive, going to sleep...")
 				}
 			}
-		}()
-	})
+		}
+	}()
 
 	fmt.Printf("Run HTTP server on port:%v\n\r", httpPort)
 	http.ListenAndServe(":"+httpPort, nil)
