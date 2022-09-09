@@ -1,0 +1,43 @@
+name: CI
+on:
+  push:
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19'
+        id: go
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v3
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: go mod verify
+        run: go mod verify
+
+      - name: Linting
+        run: |
+            go install honnef.co/go/tools/cmd/staticcheck@latest
+            staticcheck ./...
+      - name: govulncheck
+        run: |
+            go install golang.org/x/vuln/cmd/govulncheck@latest
+            govulncheck ./...
+
+      - name: Testing
+        run: go test -cover -v ./...
+
+      - name: Build
+        run: go build .
