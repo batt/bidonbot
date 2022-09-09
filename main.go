@@ -155,19 +155,16 @@ func main() {
 
 	ticker := time.NewTicker(10 * time.Minute)
 	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				now := time.Now()
+		for range ticker.C {
+			now := time.Now()
 
-				elapsedMinutes := (60*(now.Hour()+24) + now.Minute() - wakeUpOffset) % (60 * 24)
-				fmt.Printf("Awake for %d minutes\n", elapsedMinutes)
-				if elapsedMinutes < awakeMinutes {
-					fmt.Println("keepalive ping!")
-					http.Get(httpURL + "/keepalive")
-				} else {
-					fmt.Println("skipping keepalive, going to sleep...")
-				}
+			elapsedMinutes := (60*(now.Hour()+24) + now.Minute() - wakeUpOffset) % (60 * 24)
+			fmt.Printf("Awake for %d minutes\n", elapsedMinutes)
+			if elapsedMinutes < awakeMinutes {
+				fmt.Println("keepalive ping!")
+				http.Get(httpURL + "/keepalive")
+			} else {
+				fmt.Println("skipping keepalive, going to sleep...")
 			}
 		}
 	}()
