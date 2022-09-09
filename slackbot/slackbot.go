@@ -129,7 +129,7 @@ func (bot *Bot) startRTM() error {
 			log.Errorf("Error: %s\n", ev.Error())
 
 		case *slack.InvalidAuthEvent:
-			return errors.New("Invalid credentials")
+			return errors.New("invalid credentials")
 
 		default:
 			// Can be used to handle custom events.

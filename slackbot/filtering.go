@@ -10,10 +10,6 @@ type filterer interface {
 	filter(msg *slack.Msg) bool
 }
 
-type multiFilter struct {
-	filters []filterer
-}
-
 type directFilter struct {
 	id string
 }
@@ -31,17 +27,21 @@ func (f *directFilter) filter(msg *slack.Msg) bool {
 		(strings.HasPrefix(msg.Text, "<@"+f.id+">") || strings.HasPrefix(msg.Channel, "D"))
 }
 
-func newMultiFilter(filters ...filterer) *multiFilter {
-	return &multiFilter{
-		filters: filters,
-	}
-}
+// type multiFilter struct {
+// 	filters []filterer
+// }
 
-func (f *multiFilter) filter(msg *slack.Msg) bool {
-	for _, filter := range f.filters {
-		if !filter.filter(msg) {
-			return false
-		}
-	}
-	return true
-}
+// func newMultiFilter(filters ...filterer) *multiFilter {
+// 	return &multiFilter{
+// 		filters: filters,
+// 	}
+// }
+
+// func (f *multiFilter) filter(msg *slack.Msg) bool {
+// 	for _, filter := range f.filters {
+// 		if !filter.filter(msg) {
+// 			return false
+// 		}
+// 	}
+// 	return true
+// }
